@@ -1,0 +1,83 @@
+name: Build FENDL Arrow Data
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      fendl_release:
+        description: "FENDL release version"
+        required: true
+        default: "3.2c"
+        type: choice
+        options:
+          - "3.2c"
+          - "3.1d"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake gfortran
+
+      - name: Build NJOY2016
+        run: |
+          git clone https://github.com/njoy/NJOY2016.git
+          cd NJOY2016
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+          sudo cp njoy /usr/local/bin/
+          njoy --version || true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install "nuclear_data_to_yamc_format>=0.1.3"
+          pip install --extra-index-url https://shimwell.github.io/wheels openmc
+
+      - name: Determine FENDL release
+        id: release
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.fendl_release }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=3.2c" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Convert FENDL to Arrow format
+        run: |
+          convert-fendl --release ${{ steps.release.outputs.version }} --nuclides Fe56 --cleanup
+
+      - name: Compress Arrow files
+        run: |
+          RELEASE=${{ steps.release.outputs.version }}
+          tar -czf "fendl-${RELEASE}-arrow.tar.gz" "fendl-${RELEASE}-arrow/"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fendl-${{ steps.release.outputs.version }}-arrow
+          path: fendl-${{ steps.release.outputs.version }}-arrow.tar.gz
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE=${{ steps.release.outputs.version }}
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "fendl-${RELEASE}-arrow.tar.gz" \
+            --clobber
