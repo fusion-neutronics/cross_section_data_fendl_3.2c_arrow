@@ -55,17 +55,28 @@ convert-fendl --release 3.2c --nuclides Fe56
 ### Compress each nuclide and upload to a release
 
 ```bash
+export TAG=1.0.0
+
 cd fendl-3.2c-arrow/neutron
 for d in *.arrow; do
   tar -cf "${d}.tar" "$d"
 done
-gh release upload <TAG> *.arrow.tar \
+gh release upload $TAG *.arrow.tar \
+  --repo fusion-neutronics/cross_section_data_fendl_3.2c_arrow \
+  --clobber
+cd ../..
+
+cd fendl-3.2c-arrow/photon
+for d in *.arrow; do
+  tar -cf "${d}.tar" "$d"
+done
+gh release upload $TAG *.arrow.tar \
   --repo fusion-neutronics/cross_section_data_fendl_3.2c_arrow \
   --clobber
 cd ../..
 ```
 
-Replace `<TAG>` with the release tag (e.g. `0.0.1`). This uploads each nuclide as a separate uncompressed tar (e.g. `Fe56.arrow.tar`, `U235.arrow.tar`).
+This uploads each nuclide as a separate uncompressed tar (e.g. `Fe56.arrow.tar`, `U235.arrow.tar`) for both neutron and photon data.
 
 ### Clean up source files
 
