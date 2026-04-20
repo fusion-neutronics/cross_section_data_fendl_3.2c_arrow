@@ -34,7 +34,7 @@ cd ../..
 ### Install Python dependencies
 
 ```bash
-pip install "nuclear_data_to_yamc_format>=0.1.3"
+pip install nuclear_data_to_yamc_format
 pip install --extra-index-url https://shimwell.github.io/wheels openmc
 ```
 
