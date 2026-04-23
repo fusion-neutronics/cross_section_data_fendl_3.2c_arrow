@@ -38,45 +38,23 @@ pip install nuclear_data_to_yamc_format
 pip install --extra-index-url https://shimwell.github.io/wheels openmc
 ```
 
-### Convert all nuclides
+### Build and (optionally) upload
+
+From the repo root:
 
 ```bash
-convert-fendl --release 3.2c
+./build_release.sh            # build cross sections and tar each nuclide
+./build_release.sh 1.0.0      # same, then upload every .arrow.tar to release tag 1.0.0
+TAG=1.0.0 ./build_release.sh  # same as above, via env var
 ```
 
-This downloads ACE (neutron) and ENDF (photon) files from IAEA if not found locally, then converts all isotopes through NJOY at 6 temperatures. Output goes to `fendl-3.2c-arrow/`.
+Without a tag the script stops after producing the `.arrow.tar` files (under `fendl-3.2c-arrow/neutron/` and `fendl-3.2c-arrow/photon/`) so you can upload manually. With a tag it runs `gh release upload ... --clobber` for you.
 
 To convert a single nuclide for testing:
 
 ```bash
 convert-fendl --release 3.2c --nuclides Fe56
 ```
-
-### Compress each nuclide and upload to a release
-
-```bash
-export TAG=1.0.0
-
-cd fendl-3.2c-arrow/neutron
-for d in *.arrow; do
-  tar -cf "${d}.tar" "$d"
-done
-gh release upload $TAG *.arrow.tar \
-  --repo fusion-neutronics/cross_section_data_fendl_3.2c_arrow \
-  --clobber
-cd ../..
-
-cd fendl-3.2c-arrow/photon
-for d in *.arrow; do
-  tar -cf "${d}.tar" "$d"
-done
-gh release upload $TAG *.arrow.tar \
-  --repo fusion-neutronics/cross_section_data_fendl_3.2c_arrow \
-  --clobber
-cd ../..
-```
-
-This uploads each nuclide as a separate uncompressed tar (e.g. `Fe56.arrow.tar`, `U235.arrow.tar`) for both neutron and photon data.
 
 ### Clean up source files
 
