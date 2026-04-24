@@ -16,17 +16,17 @@ GH_REPO="fusion-neutronics/cross_section_data_fendl_3.2c_arrow"
 echo "==> converting FENDL 3.2c neutron + photon data into $OUT_DIR/"
 convert-fendl --release 3.2c
 
-tar_nuclides () {
+tar_arrows () {
   local dir="$1"
-  echo "==> tarring nuclides in $dir"
+  echo "==> tarring arrow files/folders in $dir"
   (
     cd "$dir"
     shopt -s nullglob
     for d in *.arrow; do tar -cf "${d}.tar" "$d"; done
   )
 }
-tar_nuclides "$OUT_DIR/neutron"
-tar_nuclides "$OUT_DIR/photon"
+tar_arrows "$OUT_DIR/neutron"
+tar_arrows "$OUT_DIR/photon"
 
 echo
 echo "Done. Artifacts ready under $OUT_DIR/."
@@ -34,8 +34,13 @@ echo "Done. Artifacts ready under $OUT_DIR/."
 if [[ -n "$TAG" ]]; then
   echo
   echo "==> uploading to release $TAG on $GH_REPO"
-  gh release upload "$TAG" "$OUT_DIR"/neutron/*.arrow.tar --repo "$GH_REPO" --clobber
-  gh release upload "$TAG" "$OUT_DIR"/photon/*.arrow.tar  --repo "$GH_REPO" --clobber
+  shopt -s nullglob
+  neutron_tars=("$OUT_DIR"/neutron/*.arrow.tar)
+  photon_tars=("$OUT_DIR"/photon/*.arrow.tar)
+  shopt -u nullglob
+  [[ ${#neutron_tars[@]} -gt 0 ]] && gh release upload "$TAG" "${neutron_tars[@]}" --repo "$GH_REPO" --clobber
+  [[ ${#photon_tars[@]}  -gt 0 ]] && gh release upload "$TAG" "${photon_tars[@]}"  --repo "$GH_REPO" --clobber
+  [[ -f "$OUT_DIR/index.txt" ]] && gh release upload "$TAG" "$OUT_DIR/index.txt" --repo "$GH_REPO" --clobber
   echo "==> upload complete"
 else
   echo
@@ -43,4 +48,5 @@ else
   echo "  export TAG=<your-tag>"
   echo "  gh release upload \$TAG $OUT_DIR/neutron/*.arrow.tar --repo $GH_REPO --clobber"
   echo "  gh release upload \$TAG $OUT_DIR/photon/*.arrow.tar  --repo $GH_REPO --clobber"
+  echo "  gh release upload \$TAG $OUT_DIR/index.txt            --repo $GH_REPO --clobber"
 fi
